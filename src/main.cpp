@@ -12,6 +12,12 @@ int main() {
 	cout << db.login("3213", "lunch") << endl;
 	cout << "getUserInfo() => " << endl;
 	db.getUserInfo();
+	cout << "getTranscript() => " << endl;
+	db.getTranscript(false);
+	cout << "getEnrolledCourses(false) => " << endl;
+	db.getEnrolledCourses(false);
+	cout << "getEnrolledCourses(true) => " << endl;
+	db.getEnrolledCourses(true);
 	/*
 	conn = mysql_init(NULL);
 	mysql_real_connect(

@@ -28,7 +28,9 @@ class NUDB {
 
 		std::map<std::string, std::string> getUserInfo();
 
-		std::vector<std::map<std::string, std::string> > getTranscript();
+		std::vector<std::map<std::string, std::string> > getTranscript(bool filterCurrent);
+
+		std::vector<std::map<std::string, std::string> > getEnrolledCourses(bool onlyThisSemester);
 
 		bool enrollCourse(std::string& code);
 		
@@ -55,6 +57,10 @@ class NUDB {
 
 		// only for debug
 		static void printResult(std::vector<std::map<std::string, std::string> >& res);
+
+		static std::string getSemester(int mon);
+		
+		static void getCurrentYearAndSemester(std::string& year, std::string& semester);
 };
 
 #endif // __NUDB_H__

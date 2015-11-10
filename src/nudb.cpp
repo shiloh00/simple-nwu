@@ -3,6 +3,7 @@
 #include <nudb.h>
 #include <vector>
 #include <map>
+#include <ctime>
 
 using namespace std;
 
@@ -72,6 +73,34 @@ map<string, string> NUDB::getUserInfo() {
 	return m;
 }
 
+vector<map<string, string> > NUDB::getTranscript(bool filterCurrent) {
+	vector<map<string, string> > res;
+	res = queryResult(
+			"SELECT A.uoscode, B.uosname, A.grade "
+			"FROM transcript A, unitofstudy B "
+			"WHERE A.studid = " + mId +
+			" AND A.uoscode = B.uoscode " +
+			(filterCurrent ? "AND A.grade IS NOT NULL" : "") + ";");
+	printResult(res);
+	return res;
+}
+
+vector<map<string, string> > NUDB::getEnrolledCourses(bool onlyThisSemester) {
+	vector<map<string, string> > res;
+	string year, semester;
+	if(onlyThisSemester)
+		getCurrentYearAndSemester(year, semester);
+	res = queryResult(
+			"SELECT A.uoscode, B.uosname "
+			"FROM transcript A, unitofstudy B "
+			"WHERE A.studid = " + mId +
+			" AND A.uoscode = B.uoscode " +
+			(onlyThisSemester ? 
+			 "AND A.year = " + year + " AND A.semester = '"  + semester + "'"
+			 : "") + ";");
+	printResult(res);
+	return res;
+}
 
 
 vector<map<string, string> > NUDB::queryResult(const string& query) {
@@ -133,3 +162,31 @@ void NUDB::printResult(vector<map<string, string> >& res) {
 		cout << endl;
 	}
 }
+
+string NUDB::getSemester(int mon) {
+	string res = "Q0";
+	switch(mon) {
+		case 1: case 2: case 3:
+			res = "Q2";
+			break;
+		case 4: case 5: case 6:
+			res = "Q3";
+			break;
+		case 7: case 8:
+			res = "Q4";
+			break;
+		case 9: case 10: case 11: case 12:
+			res = "Q1";
+			break;
+	}
+	return res;
+}
+
+void NUDB::getCurrentYearAndSemester(string& year, string& semester) {
+	time_t tv = time(nullptr);
+	struct tm currentTime;
+	localtime_r(&tv, &currentTime);
+	year = to_string(currentTime.tm_year + 1900);
+	semester = getSemester(currentTime.tm_mon + 1);
+}
+
