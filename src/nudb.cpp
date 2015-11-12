@@ -63,6 +63,20 @@ void NUDB::logout() {
 	}
 }
 
+bool NUDB::changePassword(const string& passwd) {
+	vector<string> queries = {
+		"UPDATE student SET password = '" + passwd + "' WHERE id = " + mId + ";"
+	};
+	return executeTransaction(queries);
+}
+
+bool NUDB::chanageAddress(const string& addr) {
+	vector<string> queries = {
+		"UPDATE student SET address = '" + addr + "' WHERE id = " + mId + ";"
+	};
+	return executeTransaction(queries);
+}
+
 map<string, string> NUDB::getUserInfo() {
 	map<string, string> m;
 	auto res = queryResult(

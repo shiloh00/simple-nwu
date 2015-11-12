@@ -22,9 +22,9 @@ class NUDB {
 
 		void logout();
 
-		bool changePassword(std::string& passwd);
+		bool changePassword(const std::string& passwd);
 
-		bool chanageAddress(std::string& addr);
+		bool chanageAddress(const std::string& addr);
 
 		std::map<std::string, std::string> getUserInfo();
 
