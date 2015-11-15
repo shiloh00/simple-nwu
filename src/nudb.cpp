@@ -19,6 +19,11 @@ void NUDB::init(const string srv, const int port,
 	NUDB::user = user;
 	NUDB::password = passwd;
 	NUDB::database = db;
+
+	MYSQL* conn = connectDB();
+	initProcedures(conn);
+
+	mysql_close(conn);
 }
 
 MYSQL* NUDB::connectDB() {
@@ -42,7 +47,7 @@ bool NUDB::login(const std::string& user, const std::string& passwd) {
 	mConnection = connectDB();
 	if(!mConnection) return false;
 
-	vector<map<string, string> > res = queryResult(
+	vector<map<string, string> > res = queryResult(mConnection,
 			"SELECT * FROM student WHERE id = "
 			+ user + " AND password = '" + passwd + "';");
 
@@ -67,20 +72,21 @@ bool NUDB::changePassword(const string& passwd) {
 	vector<string> queries = {
 		"UPDATE student SET password = '" + passwd + "' WHERE id = " + mId + ";"
 	};
-	return executeTransaction(queries);
+	return executeSequence(mConnection, queries, true);
 }
 
 bool NUDB::chanageAddress(const string& addr) {
 	vector<string> queries = {
 		"UPDATE student SET address = '" + addr + "' WHERE id = " + mId + ";"
 	};
-	return executeTransaction(queries);
+	return executeSequence(mConnection, queries, true);
 }
 
 map<string, string> NUDB::getUserInfo() {
 	map<string, string> m;
-	auto res = queryResult(
+	auto res = queryResult(mConnection,
 			"SELECT * FROM student WHERE id = " + mId + ";");
+	printResult(res);
 	if(res.size() > 0) {
 		m = move(res[0]);
 	}
@@ -89,7 +95,7 @@ map<string, string> NUDB::getUserInfo() {
 
 vector<map<string, string> > NUDB::getTranscript(bool filterCurrent) {
 	vector<map<string, string> > res;
-	res = queryResult(
+	res = queryResult(mConnection,
 			"SELECT A.uoscode, B.uosname, A.grade "
 			"FROM transcript A, unitofstudy B "
 			"WHERE A.studid = " + mId +
@@ -99,12 +105,17 @@ vector<map<string, string> > NUDB::getTranscript(bool filterCurrent) {
 	return res;
 }
 
+bool NUDB::withdrawCourse(const string& code, const string& sm, int y) {
+	return executeSequence(mConnection,
+			{"CALL withdraw("+mId+",'"+code+"','"+sm+"',"+to_string(y)+")"}, true);
+}
+
 vector<map<string, string> > NUDB::getEnrolledCourses(bool onlyThisSemester) {
 	vector<map<string, string> > res;
 	string year, semester;
 	if(onlyThisSemester)
 		getCurrentYearAndSemester(year, semester);
-	res = queryResult(
+	res = queryResult(mConnection,
 			"SELECT A.uoscode, B.uosname "
 			"FROM transcript A, unitofstudy B "
 			"WHERE A.studid = " + mId +
@@ -117,13 +128,13 @@ vector<map<string, string> > NUDB::getEnrolledCourses(bool onlyThisSemester) {
 }
 
 
-vector<map<string, string> > NUDB::queryResult(const string& query) {
+vector<map<string, string> > NUDB::queryResult(MYSQL* conn, const string& query) {
 	vector<map<string, string> > res;
 	MYSQL_RES* res_set;
 	MYSQL_ROW row;
 	MYSQL_FIELD* field;
-	mysql_query(mConnection, query.c_str());
-	res_set = mysql_store_result(mConnection);
+	mysql_query(conn, query.c_str());
+	res_set = mysql_store_result(conn);
 	int num_row = mysql_num_rows(res_set);
 	int num_field = mysql_num_fields(res_set);
 	vector<string> fieldNames;
@@ -147,24 +158,26 @@ vector<map<string, string> > NUDB::queryResult(const string& query) {
 	return res;
 }
 
-bool NUDB::query(const string& query) {
-	mysql_query(mConnection, query.c_str());
-	return true;
+bool NUDB::query(MYSQL* conn, const string& query) {
+	//cout << query << endl;
+	return mysql_query(conn, query.c_str()) == 0;
 }
 
-bool NUDB::executeTransaction(const vector<string>& queries) {
+bool NUDB::executeSequence(MYSQL* conn, const vector<string>& queries, bool isTransaction) {
 
-	// TODO: start transaction
+	if(isTransaction)
+		query(conn, "START TRRANSACTION;");
 	for(auto q : queries) {
-		if(!query(q)) goto failure;
+		if(!query(conn, q)) {
+			if(isTransaction)
+				query(conn, "ROLLBACK;");
+			cout << "failed: " << q << endl;
+			return false;
+		}
 	}
-	// TODO: end transaction
-
+	if(isTransaction)
+		query(conn, "COMMIT;");
 	return true;
-
-failure:
-	// TODO: rollback
-	return false;
 }
 
 void NUDB::printResult(vector<map<string, string> >& res) {
@@ -204,3 +217,23 @@ void NUDB::getCurrentYearAndSemester(string& year, string& semester) {
 	semester = getSemester(currentTime.tm_mon + 1);
 }
 
+void NUDB::initProcedures(MYSQL* conn) {
+	for(auto& procedure : procedureList) {
+		executeSequence(conn, procedure, false);
+	}
+}
+
+vector<vector<string>> NUDB::procedureList = {
+	{
+		"DROP PROCEDURE IF EXISTS withdraw;",
+		"CREATE PROCEDURE withdraw (IN sid INT, IN c CHAR(32), IN sm CHAR(16), IN y INT) "
+		"BEGIN "
+		"    IF NOT EXISTS (SELECT * FROM transcript WHERE studid=sid AND uoscode=c AND semester=sm AND year=y AND grade IS NULL) THEN "
+		"        SIGNAL SQLSTATE '45000' "
+		"        SET MESSAGE_TEXT = 'not exiting enrollment'; "
+		"    END IF; "
+		"    DELETE FROM transcript WHERE studid=sid AND uoscode=c AND semester=sm AND year=y; "
+		"    UPDATE uosoffering SET enrollment=enrollment-1 WHERE uoscode=c AND semester=sm AND year=y; "
+		"END; "
+	},
+};

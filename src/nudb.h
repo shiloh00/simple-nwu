@@ -34,7 +34,7 @@ class NUDB {
 
 		bool enrollCourse(std::string& code);
 		
-		bool withdrawCourse(std::string& code);
+		bool withdrawCourse(const std::string& code, const std::string& sm, int y);
 
 	private:
 		static std::string server;
@@ -48,12 +48,14 @@ class NUDB {
 		MYSQL *mConnection;
 
 		static MYSQL* connectDB();
+		static void initProcedures(MYSQL* conn);
+		static std::vector<std::vector<std::string>> procedureList;
 
-		std::vector<std::map<std::string, std::string> > queryResult(const std::string& query);
+		static std::vector<std::map<std::string, std::string> > queryResult(MYSQL* conn, const std::string& query);
 
-		bool query(const std::string& query);
+		static bool query(MYSQL* conn, const std::string& query);
 
-		bool executeTransaction(const std::vector<std::string>& queries);
+		static bool executeSequence(MYSQL* conn, const std::vector<std::string>& queries, bool isTransaction);
 
 		// only for debug
 		static void printResult(std::vector<std::map<std::string, std::string> >& res);
