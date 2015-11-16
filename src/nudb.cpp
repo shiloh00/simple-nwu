@@ -242,8 +242,10 @@ bool NUDB::executeSequence(MYSQL* conn, const vector<string>& queries, bool isTr
 			return false;
 		}
 	}
-	if(isTransaction)
+	if(isTransaction) {
+		cout << "success!" << endl;
 		query(conn, "COMMIT;");
+	}
 	return true;
 }
 
