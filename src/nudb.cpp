@@ -170,9 +170,9 @@ vector<map<string, string> > NUDB::getOfferingCourses() {
 		string prereqStr = ss.str();
 		if(prereqStr.size() > 0)
 			ent["prerequoscode"] = move(prereqStr);
-		cout << ss.str() << endl;
+		//cout << ss.str() << endl;
 	}
-	printResult(res);
+	//printResult(res);
 	return res;
 }
 
@@ -191,12 +191,12 @@ void NUDB::getNextSemester(const string& y, const string& s, string& ny, string&
 }
 
 vector<map<string, string> > NUDB::queryResult(MYSQL* conn, const string& query) {
-	cout << query << endl;
 	vector<map<string, string> > res;
 	MYSQL_RES* res_set;
 	MYSQL_ROW row;
 	MYSQL_FIELD* field;
 	if(mysql_query(conn, query.c_str())) {
+		cout << query << endl;
 		return res;
 	}
 	res_set = mysql_store_result(conn);
