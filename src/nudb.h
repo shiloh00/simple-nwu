@@ -32,7 +32,7 @@ class NUDB {
 
 		std::vector<std::map<std::string, std::string> > getEnrolledCourses(bool onlyThisSemester);
 
-		bool enrollCourse(std::string& code);
+		bool enrollCourse(const std::string& code, const std::string& sm, int y);
 		
 		bool withdrawCourse(const std::string& code, const std::string& sm, int y);
 

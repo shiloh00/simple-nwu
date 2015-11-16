@@ -30,6 +30,7 @@ int main() {
 
 	NUDB::init("localhost", 0, "test", "123456", "project3-nudb");
 	NUDB db;
+	/*
 	cout << db.login("3213", "lunch") << endl;
 	cout << "getUserInfo() => " << endl;
 	db.getUserInfo();
@@ -44,7 +45,6 @@ int main() {
 		//cout << "idx: " << i << " => " << db.withdrawCourse("COMP2129", "Q1", 2015) << endl;
 	}
 
-	/*
 	struct mg_mgr mgr;
 	struct mg_connection* nc;
 	mg_mgr_init(&mgr, nullptr);

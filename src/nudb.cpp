@@ -110,6 +110,11 @@ bool NUDB::withdrawCourse(const string& code, const string& sm, int y) {
 			{"CALL withdraw("+mId+",'"+code+"','"+sm+"',"+to_string(y)+")"}, true);
 }
 
+bool NUDB::enrollCourse(const string& code, const string& sm, int y) {
+	return executeSequence(mConnection,
+			{"CALL enroll("+mId+",'"+code+"','"+sm+"',"+to_string(y)+")"}, true);
+}
+
 vector<map<string, string> > NUDB::getEnrolledCourses(bool onlyThisSemester) {
 	vector<map<string, string> > res;
 	string year, semester;
@@ -225,6 +230,21 @@ void NUDB::initProcedures(MYSQL* conn) {
 
 vector<vector<string>> NUDB::procedureList = {
 	{
+		"DROP FUNCTION IF EXISTS semester_to_date_string;",
+		"CREATE FUNCTION semester_to_date_string(sm CHAR(16), y INT) "
+		"RETURNS CHAR(32) "
+		"BEGIN "
+		"    DECLARE mon CHAR(32);"
+		"    IF sm='Q1' THEN SET mon='09'; "
+		"    ELSEIF sm='Q2' THEN SET mon='01'; "
+		"    ELSEIF sm='Q3' THEN SET mon='04'; "
+		"    ELSE SET mon='07'; "
+		"    END IF;"
+		"    SET mon=CONCAT(y, '-', mon, '-01'); "
+		"    RETURN mon; "
+		"END;"
+	},
+	{
 		"DROP PROCEDURE IF EXISTS withdraw;",
 		"CREATE PROCEDURE withdraw (IN sid INT, IN c CHAR(32), IN sm CHAR(16), IN y INT) "
 		"BEGIN "
@@ -234,6 +254,22 @@ vector<vector<string>> NUDB::procedureList = {
 		"    END IF; "
 		"    DELETE FROM transcript WHERE studid=sid AND uoscode=c AND semester=sm AND year=y; "
 		"    UPDATE uosoffering SET enrollment=enrollment-1 WHERE uoscode=c AND semester=sm AND year=y; "
-		"END; "
+		"END;"
+	},
+	{
+		"DROP PROCEDURE IF EXISTS enroll;",
+		"CREATE PROCEDURE enroll (IN sid INT, IN c CHAR(32), IN sm CHAR(16), IN y INT) "
+		"BEGIN "
+		"    IF EXISTS (SELECT * FROM transcript WHERE studid=sid AND uoscode=c AND semester=sm AND year=y) THEN "
+		"        SIGNAL SQLSTATE '45000' "
+		"        SET MESSAGE_TEXT = 'specified course has been enrolled'; "
+		"    END IF; "
+		"    IF NOT EXISTS (SELECT * FROM uosoffering WHERE uoscode=c AND semester=sm AND year=y AND enrollment<maxenrollment) THEN "
+		"        SIGNAL SQLSTATE '45000' "
+		"        SET MESSAGE_TEXT = 'no such course or enrollment exceeded'; "
+		"    END IF; "
+		"    INSERT INTO transcript VALUES (sid, c, sm, y, NULL); "
+		"    UPDATE uosoffering SET enrollment=enrollment+1 WHERE uoscode=c AND semester=sm AND year=y; "
+		"END;"
 	},
 };
