@@ -4,6 +4,9 @@
 #include <vector>
 #include <map>
 #include <ctime>
+#include <sstream>
+#include <algorithm>
+#include <string>
 
 using namespace std;
 
@@ -132,20 +135,79 @@ vector<map<string, string> > NUDB::getEnrolledCourses(bool onlyThisSemester) {
 	return res;
 }
 
+vector<map<string, string> > NUDB::getOfferingCourses() {
+	vector<map<string, string> > res;
+	string y, s, ny, ns;
+	getCurrentYearAndSemester(y, s);
+	getNextSemester(y, s, ny, ns);
+	res = queryResult(mConnection,
+			"SELECT A.uoscode, A.semester, A.year, A.enrollment, A.maxenrollment,"
+			"B.uosname FROM uosoffering A, unitofstudy B "
+			"WHERE A.uoscode=B.uoscode AND ("
+			"(A.semester='"+s+"' AND A.year="+y+") OR "
+			"(A.semester='"+ns+"' AND A.year="+ny+"));"
+			);
+	for(auto& ent : res) {
+		if(queryResult(mConnection,
+			"SELECT * FROM transcript "
+			"WHERE studid="+mId+" AND year="+ent["year"]+
+			" AND semester='"+ent["semester"]+"'"
+			" AND uoscode='"+ent["uoscode"]+"';").size())
+			ent["enrolled"] = "true";
+		else
+			ent["enrolled"] = "false";
+		vector<map<string, string> > prereq = queryResult(mConnection,
+			"SELECT * FROM requires WHERE uoscode='"+ent["uoscode"]+"' "
+			"AND prerequoscode NOT IN "
+			"(SELECT uoscode FROM transcript "
+			"WHERE studid="+mId+" AND grade IS NOT NULL);"
+			);
+		stringstream ss;
+		for(int i = 0; i < prereq.size(); i++) {
+			if(i != 0) ss << ", ";
+			ss << prereq[i]["prerequoscode"];
+		}
+		string prereqStr = ss.str();
+		if(prereqStr.size() > 0)
+			ent["prerequoscode"] = move(prereqStr);
+		cout << ss.str() << endl;
+	}
+	printResult(res);
+	return res;
+}
+
+void NUDB::getNextSemester(const string& y, const string& s, string& ny, string& ns) {
+	int cy = stoi(y);
+	if(s == "Q1") {
+		ny = to_string(cy + 1);
+	} else {
+		ny = y;
+	}
+	ns = s;
+	if(s == "Q4")
+		ns = "Q1";
+	else
+		ns[1]++;
+}
 
 vector<map<string, string> > NUDB::queryResult(MYSQL* conn, const string& query) {
+	cout << query << endl;
 	vector<map<string, string> > res;
 	MYSQL_RES* res_set;
 	MYSQL_ROW row;
 	MYSQL_FIELD* field;
-	mysql_query(conn, query.c_str());
+	if(mysql_query(conn, query.c_str())) {
+		return res;
+	}
 	res_set = mysql_store_result(conn);
 	int num_row = mysql_num_rows(res_set);
 	int num_field = mysql_num_fields(res_set);
 	vector<string> fieldNames;
 	for(int i = 0; i < num_field; i++) {
 		field = mysql_fetch_field(res_set);
-		fieldNames.push_back(string(field->name));
+		string fn(field->name);
+		transform(fn.begin(), fn.end(), fn.begin(), ::tolower);
+		fieldNames.push_back(move(fn));
 	}
 	for(int i = 0; i < num_row; i++) {
 		map<string, string> m;

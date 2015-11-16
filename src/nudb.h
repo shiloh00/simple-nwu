@@ -32,6 +32,8 @@ class NUDB {
 
 		std::vector<std::map<std::string, std::string> > getEnrolledCourses(bool onlyThisSemester);
 
+		std::vector<std::map<std::string, std::string> > getOfferingCourses();
+
 		bool enrollCourse(const std::string& code, const std::string& sm, int y);
 		
 		bool withdrawCourse(const std::string& code, const std::string& sm, int y);
@@ -63,6 +65,9 @@ class NUDB {
 		static std::string getSemester(int mon);
 		
 		static void getCurrentYearAndSemester(std::string& year, std::string& semester);
+
+		static void getNextSemester(const std::string& y, const std::string& s,
+				std::string& ny, std::string& ns);
 };
 
 #endif // __NUDB_H__
