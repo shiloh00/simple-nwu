@@ -38,10 +38,23 @@ string json_list_encode(const vector<map<string, string>>& objs) {
 	return ss.str();
 }
 
+static bool is_websocket(struct mg_connection* nc) {
+	return nc->flags & MG_F_IS_WEBSOCKET;
+}
+
+static void broadcast_warning(struct mg_connection* nc, const string& msg) {
+	for(struct mg_connection* conn = mg_next(nc->mgr, nullptr); conn; conn = mg_next(nc->mgr, conn)) {
+		if(is_websocket(conn)) {
+			mg_send_websocket_frame(conn, WEBSOCKET_OP_TEXT, msg.c_str(), msg.size());
+		}
+	}
+}
+
 static void ev_handler(struct mg_connection* nc, int ev, void* ev_data) {
 	static map<string, NUDB*> dbMap;
 
-	struct http_message *hm = (struct http_message *) ev_data;
+	struct http_message* hm = (struct http_message*) ev_data;
+	struct websocket_message* wm = (struct websocket_message*) ev_data;
 	struct mg_str key;
 
 	switch(ev) {
@@ -62,12 +75,24 @@ static void ev_handler(struct mg_connection* nc, int ev, void* ev_data) {
 				} else if (uri == "/do_enroll") {
 				} else if (uri == "/get_withdraw") {
 				} else if (uri == "/do_withdraw") {
+				} else if (uri == "/trigger_warning") {
+					// TODO: to broadcast the trigger warning
 				} else {
 					// serve static content
 					mg_serve_http(nc, hm, opts);
 				}
 			}
 			break;
+		/*
+		case MG_EV_WEBSOCKET_HANDSHAKE_DONE:
+			{
+			}
+			break;
+		case MG_EV_WEBSOCKET_FRAME:
+			{
+			}
+			break;
+		*/
 		default:
 			break;
 	}
@@ -81,8 +106,10 @@ int main() {
 	cerr << db.login("3213", "lunch") << endl;
 	cout << "getUserInfo() => " << endl;
 	db.getUserInfo();
-	cout << "getTranscript() => " << endl;
-	db.getTranscript(false);
+	//cout << "getTranscript() => " << endl;
+	//db.getTranscript(false);
+	cout << "getCourseInfo() => " << endl;
+	db.getCourseInfo("COMP3419", "Q1", 2015);
 	cout << "getEnrolledCourses(false) => " << endl;
 	db.getEnrolledCourses(false);
 	cout << "getEnrolledCourses(true) => " << endl;

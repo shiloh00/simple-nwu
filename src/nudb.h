@@ -28,6 +28,8 @@ class NUDB {
 
 		std::map<std::string, std::string> getUserInfo();
 
+		std::map<std::string, std::string> getCourseInfo(const std::string& c, const std::string& s, int y);
+
 		std::vector<std::map<std::string, std::string> > getTranscript(bool filterCurrent);
 
 		std::vector<std::map<std::string, std::string> > getEnrolledCourses(bool onlyThisSemester);

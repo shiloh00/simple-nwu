@@ -96,10 +96,29 @@ map<string, string> NUDB::getUserInfo() {
 	return m;
 }
 
+map<string, string> NUDB::getCourseInfo(const string& c, const string& s, int y) {
+	map<string, string> m;
+	auto res = queryResult(mConnection,
+			"SELECT T.semester, T.year, T.grade, T.uoscode, "
+			"F.name, O.enrollment, O.maxenrollment, U.uosname "
+			"FROM transcript T, faculty F, uosoffering O, unitofstudy U "
+			"WHERE T.uoscode='"+c+"' AND T.semester='"+s+"' AND "
+			"T.year="+to_string(y)+" AND "
+			"T.uoscode=O.uoscode AND T.semester=O.semester AND "
+			"T.year=O.year AND O.instructorid=F.id AND "
+			"T.uoscode=U.uoscode; "
+			);
+	printResult(res);
+	if(res.size() > 0) {
+		m = move(res[0]);
+	}
+	return m;
+}
+
 vector<map<string, string> > NUDB::getTranscript(bool filterCurrent) {
 	vector<map<string, string> > res;
 	res = queryResult(mConnection,
-			"SELECT A.uoscode, B.uosname, A.grade "
+			"SELECT A.uoscode, B.uosname, A.grade, A.semester, A.year "
 			"FROM transcript A, unitofstudy B "
 			"WHERE A.studid = " + mId +
 			" AND A.uoscode = B.uoscode " +
