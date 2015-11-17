@@ -74,6 +74,10 @@ static void ev_handler(struct mg_connection* nc, int ev, void* ev_data) {
 				       query(hm->query_string.p, hm->query_string.len),
 				       method(hm->method.p, hm->method.len);
 				transform(method.begin(), method.end(), method.begin(), ::tolower);
+				char cookieBuf[BUF_SIZE];
+				memset(cookieBuf, 0, BUF_SIZE);
+				mg_get_http_var(&hm->body, "session", cookieBuf, BUF_SIZE);
+				string curCookie(cookieBuf);
 
 				cout << "|" << uri << "|"  << endl;
 				//cout << hm->uri.p << endl;
@@ -98,7 +102,7 @@ static void ev_handler(struct mg_connection* nc, int ev, void* ev_data) {
 									});
 							dbMap[cookie] = db;
 							send_json_response(nc, msg);
-							cout << "login success!" << endl;
+							cout << "login success! cookie: " << cookie << endl;
 						} else {
 							string msg = json_encode({{"success","false"}});
 							send_json_response(nc, msg);
@@ -108,6 +112,16 @@ static void ev_handler(struct mg_connection* nc, int ev, void* ev_data) {
 						}
 						cout << "login!!!=>" <<  "user: " << user << " pwd: " << password<< endl;
 					} else if (uri == "/do_logout") {
+						cout << "log cookie: " << curCookie << endl;
+						int cookieInt;
+						if(curCookie.size() > 0) {
+							cookieInt = stoi(curCookie);
+							if(dbMap.find(cookieInt) != dbMap.end()) {
+								dbMap.erase(cookieInt);
+								cout << "deleted!" << endl;
+							}
+						}
+						send_json_response(nc, json_encode({{"success", "true"}}));
 					} else if (uri == "/get_courses") {
 					} else if (uri == "/update_passwd") {
 					} else if (uri == "/update_addr") {

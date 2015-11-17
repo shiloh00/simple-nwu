@@ -17,7 +17,6 @@
     <link href="/css/signin.css" rel="stylesheet">
 
     <script src="/js/jquery.js"></script>
-    <script src="/js/jquery.cookie.js"></script>
 
   </head>
 
@@ -45,10 +44,26 @@
 
       <script>
 	$(function() {
-		/*
-		if($.cookie)
-			window.location.replace("/caesar.html");
-			*/
+
+function setCookie(cname, cvalue, exdays) {
+    var d = new Date();
+    d.setTime(d.getTime() + (exdays*24*60*60*1000));
+    var expires = "expires="+d.toUTCString();
+    document.cookie = cname + "=" + cvalue + "; " + expires;
+}
+
+function getCookie(cname) {
+    var name = cname + "=";
+    var ca = document.cookie.split(';');
+    for(var i=0; i<ca.length; i++) {
+        var c = ca[i];
+        while (c.charAt(0)==' ') c = c.substring(1);
+        if (c.indexOf(name) == 0) return c.substring(name.length, c.length);
+    }
+    return "";
+}
+		var curCookie = getCookie("session");
+		if(curCookie && curCookie != "") window.location.replace("/caesar.html");
 
 		$("#submit_btn").click(function() {
 			var qs = 'user=' + encodeURIComponent($("#user").val())
@@ -63,7 +78,8 @@
 					//var obj = JSON.parse(data);
 					var obj = data;
 					if(obj.success == "true") {
-						$.cookie("session", obj.cookie);
+						//Cookies.set("session", obj.cookie, {path:"/"});
+						setCookie("session", obj.cookie,1);
 						// redirect
 						window.location.replace("/caesar.html");
 					} else {
