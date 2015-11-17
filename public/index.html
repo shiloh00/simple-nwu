@@ -16,27 +16,68 @@
     <!-- Custom styles for this template -->
     <link href="/css/signin.css" rel="stylesheet">
 
+    <script src="/js/jquery.js"></script>
+    <script src="/js/jquery.cookie.js"></script>
+
   </head>
 
   <body>
 
     <div class="container">
 
-      <form class="form-signin" action="/do_login">
+
+      <form class="form-signin" >
         <h2 class="form-signin-heading">Please sign in</h2>
+        <h5 class="form-signin-heading" id="msg"></h5>
         <label for="inputEmail" class="sr-only">Student ID</label>
         <input type="text" id="user" class="form-control" placeholder="Student Id" required autofocus>
         <label for="inputPassword" class="sr-only">Password</label>
         <input type="password" id="password" class="form-control" placeholder="Password" required>
+	<!--
         <div class="checkbox">
           <label>
             <input type="checkbox" value="remember-me"> Remember me
           </label>
         </div>
-        <button class="btn btn-lg btn-primary btn-block" type="submit">Sign in</button>
+	-->
+        <button class="btn btn-lg btn-primary btn-block" type="submit" id="submit_btn">Sign in</button>
       </form>
 
+      <script>
+	$(function() {
+		/*
+		if($.cookie)
+			window.location.replace("/caesar.html");
+			*/
+
+		$("#submit_btn").click(function() {
+			var qs = 'user=' + encodeURIComponent($("#user").val())
+				+ '&password=' + encodeURIComponent($("#password").val());
+			//alert(qs);
+			//window.location.replace("/caesar.html");
+			$.ajax({
+				type: "POST",
+				url: "/do_login",
+				data: qs,
+				success: function(data) {
+					//var obj = JSON.parse(data);
+					var obj = data;
+					if(obj.success == "true") {
+						$.cookie("session", obj.cookie);
+						// redirect
+						window.location.replace("/caesar.html");
+					} else {
+						$("#msg").html("<font color=\"red\">please the correct id and password!</font>");
+					}
+				}
+			});
+			return false;
+		});
+	});
+      </script>
+
     </div> <!-- /container -->
+
 
 
   </body>

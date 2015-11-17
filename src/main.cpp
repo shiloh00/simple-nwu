@@ -5,10 +5,16 @@
 #include <vector>
 #include <map>
 #include <sstream>
+#include <ctime>
+#include <algorithm>
+
 
 using namespace std;
 
 #define PORT "8397"
+#define BUF_SIZE (1024)
+
+static const int RAND_MASK = 0x76543210;
 
 static struct mg_serve_http_opts opts;
 
@@ -50,8 +56,12 @@ static void broadcast_warning(struct mg_connection* nc, const string& msg) {
 	}
 }
 
+static void send_json_response(struct mg_connection* nc, const string& data) {
+	mg_printf(nc, "HTTP/1.1 200 OK\r\nContent-Type: text/json\r\n\r\n%s", data.c_str());
+}
+
 static void ev_handler(struct mg_connection* nc, int ev, void* ev_data) {
-	static map<string, NUDB*> dbMap;
+	static map<int, NUDB*> dbMap;
 
 	struct http_message* hm = (struct http_message*) ev_data;
 	struct websocket_message* wm = (struct websocket_message*) ev_data;
@@ -60,27 +70,66 @@ static void ev_handler(struct mg_connection* nc, int ev, void* ev_data) {
 	switch(ev) {
 		case MG_EV_HTTP_REQUEST:
 			{
-				string uri(hm->uri.p, hm->uri.len);
+				string uri(hm->uri.p, hm->uri.len),
+				       query(hm->query_string.p, hm->query_string.len),
+				       method(hm->method.p, hm->method.len);
+				transform(method.begin(), method.end(), method.begin(), ::tolower);
+
 				cout << "|" << uri << "|"  << endl;
-				if(uri == "/do_login") {
-					cout << "login!!!" << endl;
-				} else if (uri == "/do_logout") {
-				} else if (uri == "/get_courses") {
-				} else if (uri == "/update_passwd") {
-				} else if (uri == "/update_addr") {
-				} else if (uri == "/get_transcript") {
-				} else if (uri == "/get_course_info") {
-				} else if (uri == "/get_user_info") {
-				} else if (uri == "/get_enroll") {
-				} else if (uri == "/do_enroll") {
-				} else if (uri == "/get_withdraw") {
-				} else if (uri == "/do_withdraw") {
-				} else if (uri == "/trigger_warning") {
-					// TODO: to broadcast the trigger warning
+				//cout << hm->uri.p << endl;
+				if(method == "post") {
+					if(uri == "/do_login" && method == "post") {
+						NUDB* db = new NUDB;
+						char user[BUF_SIZE], password[BUF_SIZE];
+						memset(user, 0, BUF_SIZE);
+						memset(password, 0, BUF_SIZE);
+						
+						mg_get_http_var(&hm->body, "user", user, BUF_SIZE);
+						mg_get_http_var(&hm->body, "password", password, BUF_SIZE);
+
+						string userStr(user), passwordStr(password);
+						if(db->login(userStr, passwordStr)) {
+							int cookie = rand() % RAND_MASK;
+							while(dbMap.find(cookie) != dbMap.end())
+								cookie = rand() % RAND_MASK;
+							string msg = json_encode({
+										{"success", "true"},
+										{"cookie", to_string(cookie)},
+									});
+							dbMap[cookie] = db;
+							send_json_response(nc, msg);
+							cout << "login success!" << endl;
+						} else {
+							string msg = json_encode({{"success","false"}});
+							send_json_response(nc, msg);
+							cout << "login failed!" << endl;
+							db->logout();
+							delete db;
+						}
+						cout << "login!!!=>" <<  "user: " << user << " pwd: " << password<< endl;
+					} else if (uri == "/do_logout") {
+					} else if (uri == "/get_courses") {
+					} else if (uri == "/update_passwd") {
+					} else if (uri == "/update_addr") {
+					} else if (uri == "/get_transcript") {
+					} else if (uri == "/get_course_info") {
+					} else if (uri == "/get_user_info") {
+					} else if (uri == "/get_enroll") {
+					} else if (uri == "/do_enroll") {
+					} else if (uri == "/get_withdraw") {
+					} else if (uri == "/do_withdraw") {
+					} else if (uri == "/trigger_warning") {
+						// TODO: to broadcast the trigger warning
+					} else {
+						mg_serve_http(nc, hm, opts);
+					}
+				} else if (uri == "/caesar.html") {
+					mg_serve_http(nc, hm, opts);
 				} else {
 					// serve static content
 					mg_serve_http(nc, hm, opts);
 				}
+				nc->flags |= MG_F_SEND_AND_CLOSE;
 			}
 			break;
 		/*
@@ -126,6 +175,8 @@ int main() {
 	cerr << "getOfferingCourses(true) => " << endl;
 	cout << json_list_encode(db.getOfferingCourses());
 	*/
+
+	srand(time(nullptr));
 
 	struct mg_mgr mgr;
 	struct mg_connection* nc;
