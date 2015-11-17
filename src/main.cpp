@@ -134,11 +134,54 @@ static void ev_handler(struct mg_connection* nc, int ev, void* ev_data) {
 						}
 						send_json_response(nc, resp);
 						cout << "############ get_courses" << endl;
-					} else if (uri == "/update_passwd") {
-					} else if (uri == "/update_addr") {
+					} else if (uri == "/update_profile") {
+						string resp = json_encode({{"success","false"}});
+
+						memset(cookieBuf, 0, BUF_SIZE);
+						mg_get_http_var(&hm->body, "address", cookieBuf, BUF_SIZE);
+						string new_addr(cookieBuf);
+
+						memset(cookieBuf, 0, BUF_SIZE);
+						mg_get_http_var(&hm->body, "password", cookieBuf, BUF_SIZE);
+
+						string new_password(cookieBuf);
+
+						if(curCookie.size() > 0) {
+							int cookieInt = stoi(curCookie);
+							if(dbMap.find(cookieInt) != dbMap.end()) {
+								NUDB* cur = dbMap[cookieInt];
+								if(new_addr.size())
+									cur->chanageAddress(new_addr);
+								if(new_password.size())
+									cur->changePassword(new_password);
+								resp = json_encode({{"success","true"}});
+							}
+						}
+						send_json_response(nc, resp);
+						cout << "############ update_user_info" << endl;
 					} else if (uri == "/get_transcript") {
+						string resp = json_encode({{"success","false"}});
+						if(curCookie.size() > 0) {
+							int cookieInt = stoi(curCookie);
+							if(dbMap.find(cookieInt) != dbMap.end()) {
+								NUDB* cur = dbMap[cookieInt];
+								resp = json_list_encode(cur->getTranscript(false));
+							}
+						}
+						send_json_response(nc, resp);
+						cout << "############ get_transcript" << endl;
 					} else if (uri == "/get_course_info") {
 					} else if (uri == "/get_user_info") {
+						string resp = json_encode({{"success","false"}});
+						if(curCookie.size() > 0) {
+							int cookieInt = stoi(curCookie);
+							if(dbMap.find(cookieInt) != dbMap.end()) {
+								NUDB* cur = dbMap[cookieInt];
+								resp = json_encode(cur->getUserInfo());
+							}
+						}
+						send_json_response(nc, resp);
+						cout << "############ get_user_info" << endl;
 					} else if (uri == "/get_enroll") {
 					} else if (uri == "/do_enroll") {
 					} else if (uri == "/get_withdraw") {

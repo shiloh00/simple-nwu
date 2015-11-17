@@ -108,33 +108,17 @@
 	            <table class="table table-striped">
 	              <thead>
 	                <tr>
-	                  <th>#</th>
-	                  <th>Header</th>
-	                  <th>Header</th>
-	                  <th>Header</th>
-	                  <th>Header</th>
+	                  <th>Code</th>
+	                  <th>Course</th>
+	                  <th>Semester</th>
+	                  <th>Year</th>
+	                  <th>Grade</th>
 	                </tr>
 	              </thead>
-	              <tbody>
-	                <tr>
-	                  <td>1,001</td>
-	                  <td>Lorem</td>
-	                  <td>ipsum</td>
-	                  <td>dolor</td>
-	                  <td>sit</td>
-	                </tr>
-	                <tr>
-	                  <td>1,002</td>
-	                  <td>amet</td>
-	                  <td>consectetur</td>
-	                  <td>adipiscing</td>
-	                  <td>elit</td>
-	                </tr>
+	              <tbody id="transcript_list">
 	              </tbody>
 	            </table>
 	          </div>
-
-			transcript here
 		</div>
 		<div id="enroll_tab">
 	          <h1 class="page-header">Enroll Course</h1>
@@ -208,35 +192,52 @@
 	          <h1 class="page-header">Personal Information</h1>
 	
 	          <div class="table-responsive">
-	            <table class="table table-striped">
-	              <thead>
-	                <tr>
-	                  <th>#</th>
-	                  <th>Header</th>
-	                  <th>Header</th>
-	                  <th>Header</th>
-	                  <th>Header</th>
-	                </tr>
-	              </thead>
-	              <tbody>
-	                <tr>
-	                  <td>1,001</td>
-	                  <td>Lorem</td>
-	                  <td>ipsum</td>
-	                  <td>dolor</td>
-	                  <td>sit</td>
-	                </tr>
-	                <tr>
-	                  <td>1,002</td>
-	                  <td>amet</td>
-	                  <td>consectetur</td>
-	                  <td>adipiscing</td>
-	                  <td>elit</td>
-	                </tr>
-	              </tbody>
-	            </table>
+			  <form>
+				  <table>
+				  <tbody>
+				  <tr>
+				  <td style="width=200px;">
+				  <label>Id</label>
+				  <span style="width:100px;"/>
+				  </td>
+				  <td>
+				  <input type="text" class="form-control" id="profile_id" disabled><br>
+				  </td>
+				  </tr>
+				  <tr>
+				  <td>
+				  <label>Name</label>
+				  <span style="width:100px"/>
+				  </td>
+				  <td>
+				  <input type="text" class="form-control" id="profile_name" disabled><br>
+				  </td>
+				  </tr>
+				  <tr>
+				  <td>
+				  <label>Address</label>
+				  <span style="width:100px"/>
+				  </td>
+				  <td>
+				  <input type="text" class="form-control" id="profile_address" name="address"><br>
+				  </td>
+				  </tr>
+				  <tr>
+				  <td>
+				  <label>Password</label>
+				  <span style="width:100px;"/>
+				  </td>
+				  <td>
+				  <input type="password" class="form-control" id="profile_password" name="password"><br>
+				  </td>
+				  </tr>
+				  <td>
+				  <button class="btn btn-lg btn-primary btn-block" type="submit" id="profile_submit">Save</button>
+				  </td>
+				  </tbody>
+				  </table>
+			  </form>
 	          </div>
-			profile here!!!
 		</div>
         </div>
       </div>
@@ -297,6 +298,86 @@ function getCookie(cname) {
 				}
 			});
 		}
+		function transGrade(val) {
+			if(val && val.length > 0)
+				return val;
+			return "";
+		}
+		function refreshTranscriptTab() {
+			$.ajax({
+				type: "POST",
+				url: "get_transcript",
+				data: "session="+getCookie("session"),
+				success: function(data) {
+					alert(JSON.stringify(data));
+					if(data.success != "true") {
+						$("#transcript_list").empty();
+						for(var i = 0; i < data.length; i++) {
+							$("#transcript_list").append(
+								"<tr>"+
+								"<td>"+data[i].uoscode+"</td>"+
+								"<td>"+data[i].uosname+"</td>"+
+								"<td>"+data[i].semester+"</td>"+
+								"<td>"+data[i].year+"</td>"+
+								"<td>"+transGrade(data[i].grade)+"</td>"+
+								"</tr>"
+							);
+						}
+					}
+				}
+			});
+		}	
+		var savedProfile = {
+			id: "",
+			name: "",
+			address: "",
+			password: ""
+		};
+		function refreshProfileTab() {
+			$.ajax({
+				type: "POST",
+				url: "get_user_info",
+				data: "session="+getCookie("session"),
+				success: function(data) {
+					if(data.success != "true") {
+						$("#profile_id").val(data.id);
+						$("#profile_name").val(data.name);
+						$("#profile_address").val(data.address);
+						$("#profile_password").val(data.password);
+						savedProfile = data;
+						//alert(JSON.stringify(data));
+					}
+				}
+			});
+		}
+		
+		$("#profile_submit").click(function() {
+			var qs = "";
+			if(savedProfile.address != $("#profile_address").val()) {
+				qs = "address=" + encodeURIComponent($("#profile_address").val());
+			}
+			if(savedProfile.password != $("#profile_password").val()) {
+				if(qs.length > 0) qs = qs + "&";
+				qs = qs + "password=" + encodeURIComponent($("#profile_password").val());
+			}
+			alert(qs);
+			if(qs.length > 0) {
+				$.ajax({
+					type: "POST",
+					url: "update_profile",
+					data: "session="+getCookie("session") + "&" + qs,
+					success: function(data) {
+						if(data.success == "true") {
+							alert("Information update successfully!");
+							refreshProfileTab();
+						}
+						
+					}
+				});
+
+			}
+			return false;
+		});
 
 		function switchOverviewTab() {
 			$("#panes").children("div").hide();
@@ -306,6 +387,7 @@ function getCookie(cname) {
 		}
 		function switchTranscriptTab() {
 			$("#panes").children("div").hide();
+			refreshTranscriptTab();
 			$("#transcript_tab").show();
 			setActive("transcript_side");
 		}
@@ -321,6 +403,7 @@ function getCookie(cname) {
 		}
 		function switchProfileTab() {
 			$("#panes").children("div").hide();
+			refreshProfileTab();
 			$("#profile_tab").show();
 			setActive("profile_side");
 		}
