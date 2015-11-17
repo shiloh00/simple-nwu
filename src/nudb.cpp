@@ -143,12 +143,13 @@ vector<map<string, string> > NUDB::getEnrolledCourses(bool onlyThisSemester) {
 	if(onlyThisSemester)
 		getCurrentYearAndSemester(year, semester);
 	res = queryResult(mConnection,
-			"SELECT A.uoscode, B.uosname "
-			"FROM transcript A, unitofstudy B "
+			"SELECT A.uoscode,B.uosname,A.year,A.semester,C.classtime,C.classroomid "
+			"FROM transcript A, unitofstudy B, lecture C "
 			"WHERE A.studid = " + mId +
 			" AND A.uoscode = B.uoscode " +
+			" AND A.uoscode=C.uoscode AND A.year=C.year AND A.semester=C.semester " +
 			(onlyThisSemester ? 
-			 "AND A.year = " + year + " AND A.semester = '"  + semester + "'"
+			 " AND A.year = " + year + " AND A.semester = '"  + semester + "'"
 			 : "") + ";");
 	printResult(res);
 	return res;

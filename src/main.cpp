@@ -117,12 +117,23 @@ static void ev_handler(struct mg_connection* nc, int ev, void* ev_data) {
 						if(curCookie.size() > 0) {
 							cookieInt = stoi(curCookie);
 							if(dbMap.find(cookieInt) != dbMap.end()) {
+								delete dbMap[cookieInt];
 								dbMap.erase(cookieInt);
 								cout << "deleted!" << endl;
 							}
 						}
 						send_json_response(nc, json_encode({{"success", "true"}}));
 					} else if (uri == "/get_courses") {
+						string resp = json_encode({{"success","false"}});
+						if(curCookie.size() > 0) {
+							int cookieInt = stoi(curCookie);
+							if(dbMap.find(cookieInt) != dbMap.end()) {
+								NUDB* cur = dbMap[cookieInt];
+								resp = json_list_encode(cur->getEnrolledCourses(true));
+							}
+						}
+						send_json_response(nc, resp);
+						cout << "############ get_courses" << endl;
 					} else if (uri == "/update_passwd") {
 					} else if (uri == "/update_addr") {
 					} else if (uri == "/get_transcript") {
