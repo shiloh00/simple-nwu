@@ -195,6 +195,26 @@ static void ev_handler(struct mg_connection* nc, int ev, void* ev_data) {
 						send_json_response(nc, resp);
 						cout << "############ get_enroll" << endl;
 					} else if (uri == "/do_enroll") {
+						memset(cookieBuf, 0, BUF_SIZE);
+						mg_get_http_var(&hm->body, "uoscode", cookieBuf, BUF_SIZE);
+						string uoscode(cookieBuf);
+						memset(cookieBuf, 0, BUF_SIZE);
+						mg_get_http_var(&hm->body, "semester", cookieBuf, BUF_SIZE);
+						string semester(cookieBuf);
+						memset(cookieBuf, 0, BUF_SIZE);
+						mg_get_http_var(&hm->body, "year", cookieBuf, BUF_SIZE);
+						string year(cookieBuf);
+						string resp = json_encode({{"success","false"}});
+						if(curCookie.size() > 0) {
+							int cookieInt = stoi(curCookie);
+							if(dbMap.find(cookieInt) != dbMap.end()) {
+								NUDB* cur = dbMap[cookieInt];
+								if(cur->enrollCourse(uoscode, semester, stoi(year)))
+									resp = json_encode({{"success","true"}});
+							}
+						}
+						send_json_response(nc, resp);
+						cout << "############ do_enroll" << endl;
 					} else if (uri == "/get_withdraw") {
 						string resp = json_encode({{"success","false"}});
 						if(curCookie.size() > 0) {
@@ -207,6 +227,26 @@ static void ev_handler(struct mg_connection* nc, int ev, void* ev_data) {
 						send_json_response(nc, resp);
 						cout << "############ get_withdraw" << endl;
 					} else if (uri == "/do_withdraw") {
+						memset(cookieBuf, 0, BUF_SIZE);
+						mg_get_http_var(&hm->body, "uoscode", cookieBuf, BUF_SIZE);
+						string uoscode(cookieBuf);
+						memset(cookieBuf, 0, BUF_SIZE);
+						mg_get_http_var(&hm->body, "semester", cookieBuf, BUF_SIZE);
+						string semester(cookieBuf);
+						memset(cookieBuf, 0, BUF_SIZE);
+						mg_get_http_var(&hm->body, "year", cookieBuf, BUF_SIZE);
+						string year(cookieBuf);
+						string resp = json_encode({{"success","false"}});
+						if(curCookie.size() > 0) {
+							int cookieInt = stoi(curCookie);
+							if(dbMap.find(cookieInt) != dbMap.end()) {
+								NUDB* cur = dbMap[cookieInt];
+								if(cur->withdrawCourse(uoscode, semester, stoi(year)))
+									resp = json_encode({{"success","true"}});
+							}
+						}
+						send_json_response(nc, resp);
+						cout << "############ do_withdraw" << endl;
 					} else if (uri == "/trigger_warning") {
 						// TODO: to broadcast the trigger warning
 						memset(cookieBuf, 0, BUF_SIZE);

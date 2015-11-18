@@ -320,6 +320,23 @@ function getCookie(cname) {
 			}
 			return fStr + ufStr;
 		}
+		function doEnroll(s) {
+			console.log(s);
+			var obj = JSON.parse(s);
+			$.ajax({
+				type: "POST",
+				url: "/do_enroll",
+				data: "session="+getCookie("session")+"&uoscode="+obj.c+
+					"&semester="+obj.s+"&year="+obj.y,
+				success: function(data) {
+					if(data.success == "true") {
+						alert("Enroll successfully!");
+						refreshEnrollTab();
+					}
+				}
+			});
+			//alert(obj.c+"-"+obj.s+"-"+obj.y);
+		}
 		function refreshEnrollTab() {
 			$.ajax({
 				type: "POST",
@@ -330,6 +347,16 @@ function getCookie(cname) {
 					if(data.success != "true") {
 						$("#enroll_list").empty();
 						for(var i = 0; i < data.length; i++) {
+							var obj = {
+								y: data[i].year,
+								s: data[i].semester,
+								c: data[i].uoscode
+							};
+							var btnStr = '<td><button class=\'enroll-btn\' data-button=\''+JSON.stringify(obj)+'\'>enroll</button></td>';
+							if(data[i].uprerequoscode && data[i].uprerequoscode.length > 0)
+								btnStr = '<td>Prerequisite not fulfilled</td>';
+							else if(data[i].enrolled == "true")
+								btnStr = '<td>Enrolled</td>';
 							$("#enroll_list").append(
 								"<tr>"+
 								"<td>"+data[i].uoscode+"</td>"+
@@ -339,18 +366,33 @@ function getCookie(cname) {
 								"<td>"+data[i].enrollment+"</td>"+
 								"<td>"+data[i].maxenrollment+"</td>"+
 								"<td>"+combinePrereq(data[i].prerequoscode, data[i].uprerequoscode)+"</td>"+
-								"<td>"+""+"</td>"+
+								btnStr+
 								"</tr>"
 							);
 						}
+						$(".enroll-btn").click(function() {
+							doEnroll($(this).attr("data-button"));
+						});
 					}
 				}
 			});
 		}
 		function doWithdraw(s) {
-		  console.log(s);
+			console.log(s);
 			var obj = JSON.parse(s);
-			alert(obj.c+"-"+obj.s+"-"+obj.y);
+			$.ajax({
+				type: "POST",
+				url: "/do_withdraw",
+				data: "session="+getCookie("session")+"&uoscode="+obj.c+
+					"&semester="+obj.s+"&year="+obj.y,
+				success: function(data) {
+					if(data.success == "true") {
+						alert("Withdraw successfully!");
+						refreshWithdrawTab();
+					}
+				}
+			});
+			//alert(obj.c+"-"+obj.s+"-"+obj.y);
 		}
 		function refreshWithdrawTab() {
 			$.ajax({
@@ -362,26 +404,24 @@ function getCookie(cname) {
 					if(data.success != "true") {
 						$("#withdraw_list").empty();
 						for(var i = 0; i < data.length; i++) {
-							var tr = $("<tr>"+
+							var obj = {
+								y: data[i].year,
+								s: data[i].semester,
+								c: data[i].uoscode
+							};
+							var tr = "<tr>"+
 								"<td>"+data[i].uoscode+"</td>"+
 								"<td>"+data[i].uosname+"</td>"+
 								"<td>"+data[i].semester+"</td>"+
-								"<td>"+data[i].year+"</td></tr>");
-							var td = $('<td></td>');
-							var btn = $('<button>withdraw</button>');
-							var obj = {
-								c: data[i].uoscode,
-							        s: data[i].semester,
-							        y: data[i].year
-							};
-							var ss = doWithdraw(JSON.stringify(obj));
-							btn.click(function() {
-								doWithdraw(ss);
-							});
-							btn.appendTo(td);
-							td.appendTo(tr);
-							tr.appendTo($("#withdraw_list"));
+								"<td>"+data[i].year+"</td>"+
+								'<td><button class=\'withdraw-btn\' data-button=\''+JSON.stringify(obj)+'\'>withdraw</button></td>'+
+								"</tr>";
+							$("#withdraw_list").append(tr);
+
 						}
+						$(".withdraw-btn").click(function() {
+							doWithdraw($(this).attr("data-button"));
+						});
 					}
 				}
 			});
