@@ -52,6 +52,7 @@ static void broadcast_warning(struct mg_connection* nc, const string& msg) {
 	for(struct mg_connection* conn = mg_next(nc->mgr, nullptr); conn; conn = mg_next(nc->mgr, conn)) {
 		if(is_websocket(conn)) {
 			mg_send_websocket_frame(conn, WEBSOCKET_OP_TEXT, msg.c_str(), msg.size());
+			cout << "send broadcast" << endl;
 		}
 	}
 }
@@ -208,6 +209,12 @@ static void ev_handler(struct mg_connection* nc, int ev, void* ev_data) {
 					} else if (uri == "/do_withdraw") {
 					} else if (uri == "/trigger_warning") {
 						// TODO: to broadcast the trigger warning
+						memset(cookieBuf, 0, BUF_SIZE);
+						mg_get_http_var(&hm->body, "course", cookieBuf, BUF_SIZE);
+						string course(cookieBuf);
+						send_json_response(nc, json_encode({{"success","true"}}));
+						broadcast_warning(nc, course);
+						cout << "trigger_warning: " << course << endl;
 					} else {
 						mg_serve_http(nc, hm, opts);
 					}

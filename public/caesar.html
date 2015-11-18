@@ -17,6 +17,17 @@
     <link href="/css/dashboard.css" rel="stylesheet">
     <script src="/js/jquery.js"></script>
     <script src="/js/bootstrap.js"></script>
+    <script>
+	var ws = new WebSocket('ws://' + location.host + '/');
+	ws.onopen = function(ev)  { console.log(ev); };
+	ws.onerror = function(ev) { console.log(ev); };
+  	ws.onclose = function(ev) { console.log(ev); };
+	ws.onmessage = function(ev) {
+		console.log(ev);
+		console.log(ev.data);
+		alert("Warning: The enrollment of " + ev.data + " is below half of the capacity!");
+	};
+    </script>
 
   </head>
 
@@ -336,6 +347,11 @@ function getCookie(cname) {
 				}
 			});
 		}
+		function doWithdraw(s) {
+		  console.log(s);
+			var obj = JSON.parse(s);
+			alert(obj.c+"-"+obj.s+"-"+obj.y);
+		}
 		function refreshWithdrawTab() {
 			$.ajax({
 				type: "POST",
@@ -346,15 +362,25 @@ function getCookie(cname) {
 					if(data.success != "true") {
 						$("#withdraw_list").empty();
 						for(var i = 0; i < data.length; i++) {
-							$("#withdraw_list").append(
-								"<tr>"+
+							var tr = $("<tr>"+
 								"<td>"+data[i].uoscode+"</td>"+
 								"<td>"+data[i].uosname+"</td>"+
 								"<td>"+data[i].semester+"</td>"+
-								"<td>"+data[i].year+"</td>"+
-								"<td>"+transGrade(data[i].grade)+"</td>"+
-								"</tr>"
-							);
+								"<td>"+data[i].year+"</td></tr>");
+							var td = $('<td></td>');
+							var btn = $('<button>withdraw</button>');
+							var obj = {
+								c: data[i].uoscode,
+							        s: data[i].semester,
+							        y: data[i].year
+							};
+							var ss = doWithdraw(JSON.stringify(obj));
+							btn.click(function() {
+								doWithdraw(ss);
+							});
+							btn.appendTo(td);
+							td.appendTo(tr);
+							tr.appendTo($("#withdraw_list"));
 						}
 					}
 				}
