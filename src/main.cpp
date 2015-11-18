@@ -183,6 +183,16 @@ static void ev_handler(struct mg_connection* nc, int ev, void* ev_data) {
 						send_json_response(nc, resp);
 						cout << "############ get_user_info" << endl;
 					} else if (uri == "/get_enroll") {
+						string resp = json_encode({{"success","false"}});
+						if(curCookie.size() > 0) {
+							int cookieInt = stoi(curCookie);
+							if(dbMap.find(cookieInt) != dbMap.end()) {
+								NUDB* cur = dbMap[cookieInt];
+								resp = json_list_encode(cur->getOfferingCourses());
+							}
+						}
+						send_json_response(nc, resp);
+						cout << "############ get_enroll" << endl;
 					} else if (uri == "/do_enroll") {
 					} else if (uri == "/get_withdraw") {
 						string resp = json_encode({{"success","false"}});

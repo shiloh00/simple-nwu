@@ -127,32 +127,20 @@
 	            <table class="table table-striped">
 	              <thead>
 	                <tr>
-	                  <th>#</th>
-	                  <th>Header</th>
-	                  <th>Header</th>
-	                  <th>Header</th>
-	                  <th>Header</th>
+	                  <th>Code</th>
+	                  <th>Course</th>
+	                  <th>Semester</th>
+	                  <th>Year</th>
+	                  <th>Enrolled</th>
+	                  <th>Capacity</th>
+	                  <th>Prerequisite</th>
+	                  <th>Enroll</th>
 	                </tr>
 	              </thead>
-	              <tbody>
-	                <tr>
-	                  <td>1,001</td>
-	                  <td>Lorem</td>
-	                  <td>ipsum</td>
-	                  <td>dolor</td>
-	                  <td>sit</td>
-	                </tr>
-	                <tr>
-	                  <td>1,002</td>
-	                  <td>amet</td>
-	                  <td>consectetur</td>
-	                  <td>adipiscing</td>
-	                  <td>elit</td>
-	                </tr>
+	              <tbody id="enroll_list">
 	              </tbody>
 	            </table>
 	          </div>
-			enroll here!
 		</div>
 		<div id="withdraw_tab">
 	          <h1 class="page-header">Withdraw Courses</h1>
@@ -165,14 +153,13 @@
 	                  <th>Course</th>
 	                  <th>Semester</th>
 	                  <th>Year</th>
-	                  <th>Grade</th>
+	                  <th>Withdraw</th>
 	                </tr>
 	              </thead>
 	              <tbody id="withdraw_list">
 	              </tbody>
 	            </table>
 	          </div>
-			withdraw here!!
 		</div>
 		<div id="profile_tab">
 	          <h1 class="page-header">Personal Information</h1>
@@ -312,14 +299,50 @@ function getCookie(cname) {
 					}
 				}
 			});
-		}	
+		}
+		function combinePrereq(f, uf) {
+			var fStr = transGrade(f), ufStr = transGrade(uf);
+			var old = ufStr.length;
+			ufStr = '<font color="red">' + ufStr + "</font>";
+			if(fStr.length > 0 && old > 0) {
+				return fStr + ', ' + ufStr;
+			}
+			return fStr + ufStr;
+		}
+		function refreshEnrollTab() {
+			$.ajax({
+				type: "POST",
+				url: "get_enroll",
+				data: "session="+getCookie("session"),
+				success: function(data) {
+					//alert(JSON.stringify(data));
+					if(data.success != "true") {
+						$("#enroll_list").empty();
+						for(var i = 0; i < data.length; i++) {
+							$("#enroll_list").append(
+								"<tr>"+
+								"<td>"+data[i].uoscode+"</td>"+
+								"<td>"+data[i].uosname+"</td>"+
+								"<td>"+data[i].semester+"</td>"+
+								"<td>"+data[i].year+"</td>"+
+								"<td>"+data[i].enrollment+"</td>"+
+								"<td>"+data[i].maxenrollment+"</td>"+
+								"<td>"+combinePrereq(data[i].prerequoscode, data[i].uprerequoscode)+"</td>"+
+								"<td>"+""+"</td>"+
+								"</tr>"
+							);
+						}
+					}
+				}
+			});
+		}
 		function refreshWithdrawTab() {
 			$.ajax({
 				type: "POST",
 				url: "get_withdraw",
 				data: "session="+getCookie("session"),
 				success: function(data) {
-					alert(JSON.stringify(data));
+					//alert(JSON.stringify(data));
 					if(data.success != "true") {
 						$("#withdraw_list").empty();
 						for(var i = 0; i < data.length; i++) {
@@ -370,7 +393,7 @@ function getCookie(cname) {
 				if(qs.length > 0) qs = qs + "&";
 				qs = qs + "password=" + encodeURIComponent($("#profile_password").val());
 			}
-			alert(qs);
+			//alert(qs);
 			if(qs.length > 0) {
 				$.ajax({
 					type: "POST",
@@ -403,6 +426,7 @@ function getCookie(cname) {
 		}
 		function switchEnrollTab() {
 			$("#panes").children("div").hide();
+			refreshEnrollTab();
 			$("#enroll_tab").show();
 			setActive("enroll_side");
 		}

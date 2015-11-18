@@ -179,7 +179,7 @@ vector<map<string, string> > NUDB::getOfferingCourses() {
 			"B.uosname FROM uosoffering A, unitofstudy B "
 			"WHERE A.uoscode=B.uoscode AND ("
 			"(A.semester='"+s+"' AND A.year="+y+") OR "
-			"(A.semester='"+ns+"' AND A.year="+ny+"));"
+			"(A.semester='"+ns+"' AND A.year="+ny+")) ORDER BY A.uoscode;"
 			);
 	for(auto& ent : res) {
 		if(queryResult(mConnection,
@@ -192,21 +192,33 @@ vector<map<string, string> > NUDB::getOfferingCourses() {
 			ent["enrolled"] = "false";
 		vector<map<string, string> > prereq = queryResult(mConnection,
 			"SELECT * FROM requires WHERE uoscode='"+ent["uoscode"]+"' "
+			"AND prerequoscode IN "
+			"(SELECT uoscode FROM transcript "
+			"WHERE studid="+mId+" AND grade IS NOT NULL);"
+			);
+		vector<map<string, string> > uprereq = queryResult(mConnection,
+			"SELECT * FROM requires WHERE uoscode='"+ent["uoscode"]+"' "
 			"AND prerequoscode NOT IN "
 			"(SELECT uoscode FROM transcript "
 			"WHERE studid="+mId+" AND grade IS NOT NULL);"
 			);
-		stringstream ss;
+		stringstream ss, uss;
 		for(int i = 0; i < prereq.size(); i++) {
 			if(i != 0) ss << ", ";
 			ss << prereq[i]["prerequoscode"];
 		}
-		string prereqStr = ss.str();
+		for(int i = 0; i < uprereq.size(); i++) {
+			if(i != 0) uss << ", ";
+			uss << uprereq[i]["prerequoscode"];
+		}
+		string prereqStr = ss.str(), uprereqStr = uss.str();
 		if(prereqStr.size() > 0)
 			ent["prerequoscode"] = move(prereqStr);
+		if(uprereqStr.size() > 0)
+			ent["uprerequoscode"] = move(uprereqStr);
 		//cout << ss.str() << endl;
 	}
-	//printResult(res);
+	printResult(res);
 	return res;
 }
 
