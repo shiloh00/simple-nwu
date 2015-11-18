@@ -124,6 +124,7 @@
 	                  <th>Semester</th>
 	                  <th>Year</th>
 	                  <th>Grade</th>
+	                  <th>Detail</th>
 	                </tr>
 	              </thead>
 	              <tbody id="transcript_list">
@@ -176,8 +177,10 @@
 	          <h1 class="page-header">Personal Information</h1>
 	
 	          <div class="table-responsive">
+	          <h5 id="change-warning"></h1>
 			  <form>
-				  <table>
+				<div class="table-responsive" style="width:60%;">
+				  <table class="table table-striped">
 				  <tbody>
 				  <tr>
 				  <td style="width=200px;">
@@ -216,15 +219,84 @@
 				  </td>
 				  </tr>
 				  <td>
+				  </td>
+				  <td>
+					  <div style="width:50%;">
 				  <button class="btn btn-lg btn-primary btn-block" type="submit" id="profile_submit">Save</button>
 				  </td>
+					  </div>
 				  </tbody>
 				  </table>
+				</div>
 			  </form>
 	          </div>
 		</div>
         </div>
       </div>
+    </div>
+    <div class="modal fade">
+	    <div class="modal-dialog">
+		    <div class="modal-content">
+			    <div class="modal-header">
+				    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+				    <h4 class="modal-title">Course Details</h4>
+			    </div>
+			    <div class="modal-body">
+				 <div class="table-responsive">
+	         		   <table class="table table-striped">
+					   <!--
+	         		     <thead>
+	         		       <tr>
+	         		         <th>Code</th>
+	         		         <th>Course</th>
+	         		         <th>Semester</th>
+	         		         <th>Year</th>
+	         		         <th>Withdraw</th>
+	         		       </tr>
+	         		     </thead>
+					   -->
+	         		     <tbody>
+					     <tr>
+						     <td>Code</td>
+						     <td id="info-uoscode"></td>
+					     </tr>
+					     <tr>
+						     <td>Name</td>
+						     <td id="info-uosname"></td>
+					     </tr>
+					     <tr>
+						     <td>Semester</td>
+						     <td id="info-semester"></td>
+					     </tr>
+					     <tr>
+						     <td>Year</td>
+						     <td id="info-year"></td>
+					     </tr>
+					     <tr>
+						     <td>Instructor</td>
+						     <td id="info-instructor"></td>
+					     </tr>
+					     <tr>
+						     <td>Enrollment</td>
+						     <td id="info-enrollment"></td>
+					     </tr>
+					     <tr>
+						     <td>Capacity</td>
+						     <td id="info-capacity"></td>
+					     </tr>
+					     <tr>
+						     <td>Grade</td>
+						     <td id="info-grade"></td>
+					     </tr>
+	         		     </tbody>
+	         		   </table>
+	         		 </div>
+
+			    </div>
+			    <div class="modal-footer">
+			    </div>
+		    </div>
+	    </div>
     </div>
 
     <!-- Bootstrap core JavaScript
@@ -287,6 +359,31 @@ function getCookie(cname) {
 				return val;
 			return "";
 		}
+		function doShow(s) {
+			console.log(s);
+			var obj = JSON.parse(s);
+			$.ajax({
+				type: "POST",
+				url: "/get_course_info",
+				data: "session="+getCookie("session")+"&uoscode="+obj.c+
+					"&semester="+obj.s+"&year="+obj.y,
+				success: function(data) {
+					if(data.uoscode) {
+						//alert(JSON.stringify(data));
+						$("#info-uoscode").text(transGrade(data.uoscode));
+						$("#info-uosname").text(transGrade(data.uosname));
+						$("#info-semester").text(transGrade(data.semester));
+						$("#info-year").text(transGrade(data.year));
+						$("#info-instructor").text(transGrade(data.name));
+						$("#info-enrollment").text(transGrade(data.enrollment));
+						$("#info-capacity").text(transGrade(data.maxenrollment));
+						$("#info-grade").text(transGrade(data.grade));
+						$(".modal").modal("show");
+					}
+				}
+			});
+			//alert(obj.c+"-"+obj.s+"-"+obj.y);
+		}
 		function refreshTranscriptTab() {
 			$.ajax({
 				type: "POST",
@@ -297,6 +394,11 @@ function getCookie(cname) {
 					if(data.success != "true") {
 						$("#transcript_list").empty();
 						for(var i = 0; i < data.length; i++) {
+							var obj = {
+								y: data[i].year,
+								s: data[i].semester,
+								c: data[i].uoscode
+							};
 							$("#transcript_list").append(
 								"<tr>"+
 								"<td>"+data[i].uoscode+"</td>"+
@@ -304,9 +406,13 @@ function getCookie(cname) {
 								"<td>"+data[i].semester+"</td>"+
 								"<td>"+data[i].year+"</td>"+
 								"<td>"+transGrade(data[i].grade)+"</td>"+
+								'<td><button class=\'transcript-btn\' data-button=\''+JSON.stringify(obj)+'\'>Info</button></td>'+
 								"</tr>"
 							);
 						}
+						$(".transcript-btn").click(function() {
+							doShow($(this).attr("data-button"));
+						});
 					}
 				}
 			});
@@ -330,7 +436,7 @@ function getCookie(cname) {
 					"&semester="+obj.s+"&year="+obj.y,
 				success: function(data) {
 					if(data.success == "true") {
-						alert("Enroll successfully!");
+						//alert("Enroll successfully!");
 						refreshEnrollTab();
 					}
 				}
@@ -387,7 +493,7 @@ function getCookie(cname) {
 					"&semester="+obj.s+"&year="+obj.y,
 				success: function(data) {
 					if(data.success == "true") {
-						alert("Withdraw successfully!");
+						//alert("Withdraw successfully!");
 						refreshWithdrawTab();
 					}
 				}
@@ -433,6 +539,7 @@ function getCookie(cname) {
 			password: ""
 		};
 		function refreshProfileTab() {
+			$("#change-warning").text("");
 			$.ajax({
 				type: "POST",
 				url: "get_user_info",
@@ -474,6 +581,8 @@ function getCookie(cname) {
 					}
 				});
 
+			} else {
+				$("#change-warning").html("<font color='red'>No change has been made</font>");
 			}
 			return false;
 		});

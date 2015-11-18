@@ -7,6 +7,8 @@
 #include <sstream>
 #include <ctime>
 #include <algorithm>
+#include <set>
+#include <pthread.h>
 
 
 using namespace std;
@@ -17,6 +19,10 @@ using namespace std;
 static const int RAND_MASK = 0x76543210;
 
 static struct mg_serve_http_opts opts;
+
+static set<struct mg_connection*> wsSet;
+
+static pthread_mutex_t mutex;
 
 string json_encode(const map<string, string>& obj) {
 	stringstream ss;
@@ -48,13 +54,17 @@ static bool is_websocket(struct mg_connection* nc) {
 	return nc->flags & MG_F_IS_WEBSOCKET;
 }
 
-static void broadcast_warning(struct mg_connection* nc, const string& msg) {
-	for(struct mg_connection* conn = mg_next(nc->mgr, nullptr); conn; conn = mg_next(nc->mgr, conn)) {
+static void broadcast_warning(const string& msg) {
+	pthread_mutex_lock(&mutex);
+	for(struct mg_connection* conn : wsSet) {
+		cout << "##################### websocket in" << endl;
 		if(is_websocket(conn)) {
 			mg_send_websocket_frame(conn, WEBSOCKET_OP_TEXT, msg.c_str(), msg.size());
 			cout << "send broadcast" << endl;
 		}
+		cout << "##################### websocket out" << endl;
 	}
+	pthread_mutex_unlock(&mutex);
 }
 
 static void send_json_response(struct mg_connection* nc, const string& data) {
@@ -172,6 +182,26 @@ static void ev_handler(struct mg_connection* nc, int ev, void* ev_data) {
 						send_json_response(nc, resp);
 						cout << "############ get_transcript" << endl;
 					} else if (uri == "/get_course_info") {
+						memset(cookieBuf, 0, BUF_SIZE);
+						mg_get_http_var(&hm->body, "uoscode", cookieBuf, BUF_SIZE);
+						string uoscode(cookieBuf);
+						memset(cookieBuf, 0, BUF_SIZE);
+						mg_get_http_var(&hm->body, "semester", cookieBuf, BUF_SIZE);
+						string semester(cookieBuf);
+						memset(cookieBuf, 0, BUF_SIZE);
+						mg_get_http_var(&hm->body, "year", cookieBuf, BUF_SIZE);
+						string year(cookieBuf);
+						string resp = json_encode({{"success","false"}});
+						if(curCookie.size() > 0) {
+							int cookieInt = stoi(curCookie);
+							if(dbMap.find(cookieInt) != dbMap.end()) {
+								NUDB* cur = dbMap[cookieInt];
+								resp = json_encode(cur->getCourseInfo(uoscode, semester, stoi(year)));
+							}
+						}
+						send_json_response(nc, resp);
+						cout << "############ get_course_info" << endl;
+
 					} else if (uri == "/get_user_info") {
 						string resp = json_encode({{"success","false"}});
 						if(curCookie.size() > 0) {
@@ -227,6 +257,7 @@ static void ev_handler(struct mg_connection* nc, int ev, void* ev_data) {
 						send_json_response(nc, resp);
 						cout << "############ get_withdraw" << endl;
 					} else if (uri == "/do_withdraw") {
+						cout << "hehe begin do_withdraw" << endl;
 						memset(cookieBuf, 0, BUF_SIZE);
 						mg_get_http_var(&hm->body, "uoscode", cookieBuf, BUF_SIZE);
 						string uoscode(cookieBuf);
@@ -237,6 +268,7 @@ static void ev_handler(struct mg_connection* nc, int ev, void* ev_data) {
 						mg_get_http_var(&hm->body, "year", cookieBuf, BUF_SIZE);
 						string year(cookieBuf);
 						string resp = json_encode({{"success","false"}});
+						cout << "hehe in do_withdraw: " << uoscode << "-" << semester << "-" << year << endl;
 						if(curCookie.size() > 0) {
 							int cookieInt = stoi(curCookie);
 							if(dbMap.find(cookieInt) != dbMap.end()) {
@@ -253,7 +285,7 @@ static void ev_handler(struct mg_connection* nc, int ev, void* ev_data) {
 						mg_get_http_var(&hm->body, "course", cookieBuf, BUF_SIZE);
 						string course(cookieBuf);
 						send_json_response(nc, json_encode({{"success","true"}}));
-						broadcast_warning(nc, course);
+						broadcast_warning(course);
 						cout << "trigger_warning: " << course << endl;
 					} else {
 						mg_serve_http(nc, hm, opts);
@@ -267,16 +299,28 @@ static void ev_handler(struct mg_connection* nc, int ev, void* ev_data) {
 				nc->flags |= MG_F_SEND_AND_CLOSE;
 			}
 			break;
-		/*
 		case MG_EV_WEBSOCKET_HANDSHAKE_DONE:
 			{
+				cout << "websocket come!*********************************************" << endl;
+				pthread_mutex_lock(&mutex);
+				wsSet.insert(nc);
+				pthread_mutex_unlock(&mutex);
 			}
 			break;
+		/*
 		case MG_EV_WEBSOCKET_FRAME:
 			{
 			}
 			break;
 		*/
+		case MG_EV_CLOSE:
+			{
+				if(is_websocket(nc)) {
+					pthread_mutex_lock(&mutex);
+					wsSet.erase(nc);
+					pthread_mutex_unlock(&mutex);
+				}
+			}
 		default:
 			break;
 	}
@@ -285,6 +329,9 @@ static void ev_handler(struct mg_connection* nc, int ev, void* ev_data) {
 int main() {
 
 	NUDB::init("localhost", 0, "test", "123456", "project3-nudb");
+
+	pthread_mutex_init(&mutex, nullptr);
+
 	/*
 	NUDB db;
 	cerr << db.login("3213", "lunch") << endl;
@@ -318,6 +365,7 @@ int main() {
 	mg_mgr_init(&mgr, nullptr);
 	nc = mg_bind(&mgr, PORT, ev_handler);
 	mg_set_protocol_http_websocket(nc);
+	mg_enable_multithreading(nc);
 	opts.document_root = "./public";
 
 	while(1) {
@@ -325,6 +373,7 @@ int main() {
 	}
 
 	mg_mgr_free(&mgr);
+	pthread_mutex_destroy(&mutex);
 
 	return 0;
 }

@@ -8,6 +8,8 @@
 #include <algorithm>
 #include <string>
 
+#define DEBUG_PRINT
+
 using namespace std;
 
 string NUDB::server;
@@ -101,12 +103,12 @@ map<string, string> NUDB::getCourseInfo(const string& c, const string& s, int y)
 	auto res = queryResult(mConnection,
 			"SELECT T.semester, T.year, T.grade, T.uoscode, "
 			"F.name, O.enrollment, O.maxenrollment, U.uosname "
-			"FROM transcript T, faculty F, uosoffering O, unitofstudy U "
+			"FROM transcript T INNER JOIN uosoffering O ON T.uoscode=O.uoscode AND "
+			" T.semester=O.semester AND T.year=O.year "
+			" INNER JOIN unitofstudy U ON T.uoscode=U.uoscode "
+			" LEFT OUTER JOIN faculty F ON O.instructorid=F.id "
 			"WHERE T.uoscode='"+c+"' AND T.semester='"+s+"' AND "
-			"T.year="+to_string(y)+" AND "
-			"T.uoscode=O.uoscode AND T.semester=O.semester AND "
-			"T.year=O.year AND O.instructorid=F.id AND "
-			"T.uoscode=U.uoscode; "
+			"T.year="+to_string(y)+"; "
 			);
 	printResult(res);
 	if(res.size() > 0) {
@@ -130,12 +132,12 @@ vector<map<string, string> > NUDB::getTranscript(bool filterCurrent) {
 
 bool NUDB::withdrawCourse(const string& code, const string& sm, int y) {
 	return executeSequence(mConnection,
-			{"CALL withdraw("+mId+",'"+code+"','"+sm+"',"+to_string(y)+")"}, true);
+			{"CALL withdraw("+mId+",'"+code+"','"+sm+"',"+to_string(y)+");"}, true);
 }
 
 bool NUDB::enrollCourse(const string& code, const string& sm, int y) {
 	return executeSequence(mConnection,
-			{"CALL enroll("+mId+",'"+code+"','"+sm+"',"+to_string(y)+")"}, true);
+			{"CALL enroll("+mId+",'"+code+"','"+sm+"',"+to_string(y)+");"}, true);
 }
 
 vector<map<string, string> > NUDB::getEnrolledCourses(bool onlyThisSemester, NUDB::GradeOption o) {
@@ -273,7 +275,6 @@ vector<map<string, string> > NUDB::queryResult(MYSQL* conn, const string& query)
 }
 
 bool NUDB::query(MYSQL* conn, const string& query) {
-	//cout << query << endl;
 	return mysql_query(conn, query.c_str()) == 0;
 }
 
@@ -297,6 +298,7 @@ bool NUDB::executeSequence(MYSQL* conn, const vector<string>& queries, bool isTr
 }
 
 void NUDB::printResult(vector<map<string, string> >& res) {
+#ifdef DEBUG_PRINT
 	for(auto m : res) {
 		cout << "ROW: ";
 		for(auto p : m) {
@@ -304,6 +306,7 @@ void NUDB::printResult(vector<map<string, string> >& res) {
 		}
 		cout << endl;
 	}
+#endif
 }
 
 string NUDB::getSemester(int mon) {
@@ -340,6 +343,23 @@ void NUDB::initProcedures(MYSQL* conn) {
 }
 
 vector<vector<string>> NUDB::procedureList = {
+	{
+		"DROP FUNCTION IF EXISTS sys_exec; ",
+		"DROP FUNCTION IF EXISTS sys_eval; ",
+		"CREATE FUNCTION sys_exec RETURNS int SONAME 'lib_mysqludf_sys.so'; ",
+		"CREATE FUNCTION sys_eval RETURNS string SONAME 'lib_mysqludf_sys.so'; "
+	},
+	{
+		"DROP TRIGGER IF EXISTS below_half; ",
+		"CREATE TRIGGER below_half AFTER UPDATE ON uosoffering "
+		"FOR EACH ROW "
+		"BEGIN "
+		"    DECLARE res INT; "
+		"    IF 2*NEW.enrollment  < NEW.maxenrollment THEN "
+		"        SET res = sys_exec(concat('curl --data course=', NEW.year, '-', NEW.semester, '-',  NEW.uoscode, ' http://localhost:8397/trigger_warning')); "
+		"    END IF; "
+		"END;"
+	},
 	{
 		"DROP FUNCTION IF EXISTS semester_to_date_string;",
 		"CREATE FUNCTION semester_to_date_string(sm CHAR(16), y INT) "
