@@ -8,6 +8,7 @@
 
 class NUDB {
 	public:
+		enum GradeOption { All, HasGrade, NoGrade };
 		static void init(const std::string srv, const int port, 
 		                 const std::string user, const std::string passwd, 
 				 const std::string db);
@@ -32,7 +33,7 @@ class NUDB {
 
 		std::vector<std::map<std::string, std::string> > getTranscript(bool filterCurrent);
 
-		std::vector<std::map<std::string, std::string> > getEnrolledCourses(bool onlyThisSemester);
+		std::vector<std::map<std::string, std::string> > getEnrolledCourses(bool onlyThisSemester, GradeOption option);
 
 		std::vector<std::map<std::string, std::string> > getOfferingCourses();
 

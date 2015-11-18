@@ -129,7 +129,7 @@ static void ev_handler(struct mg_connection* nc, int ev, void* ev_data) {
 							int cookieInt = stoi(curCookie);
 							if(dbMap.find(cookieInt) != dbMap.end()) {
 								NUDB* cur = dbMap[cookieInt];
-								resp = json_list_encode(cur->getEnrolledCourses(true));
+								resp = json_list_encode(cur->getEnrolledCourses(true, NUDB::GradeOption::All));
 							}
 						}
 						send_json_response(nc, resp);
@@ -185,6 +185,16 @@ static void ev_handler(struct mg_connection* nc, int ev, void* ev_data) {
 					} else if (uri == "/get_enroll") {
 					} else if (uri == "/do_enroll") {
 					} else if (uri == "/get_withdraw") {
+						string resp = json_encode({{"success","false"}});
+						if(curCookie.size() > 0) {
+							int cookieInt = stoi(curCookie);
+							if(dbMap.find(cookieInt) != dbMap.end()) {
+								NUDB* cur = dbMap[cookieInt];
+								resp = json_list_encode(cur->getEnrolledCourses(false, NUDB::GradeOption::NoGrade));
+							}
+						}
+						send_json_response(nc, resp);
+						cout << "############ get_withdraw" << endl;
 					} else if (uri == "/do_withdraw") {
 					} else if (uri == "/trigger_warning") {
 						// TODO: to broadcast the trigger warning

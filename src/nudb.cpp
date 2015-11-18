@@ -122,7 +122,8 @@ vector<map<string, string> > NUDB::getTranscript(bool filterCurrent) {
 			"FROM transcript A, unitofstudy B "
 			"WHERE A.studid = " + mId +
 			" AND A.uoscode = B.uoscode " +
-			(filterCurrent ? "AND A.grade IS NOT NULL" : "") + ";");
+			(filterCurrent ? "AND A.grade IS NOT NULL" : "") + 
+			" ORDER BY A.year, A.semester;");
 	printResult(res);
 	return res;
 }
@@ -137,20 +138,33 @@ bool NUDB::enrollCourse(const string& code, const string& sm, int y) {
 			{"CALL enroll("+mId+",'"+code+"','"+sm+"',"+to_string(y)+")"}, true);
 }
 
-vector<map<string, string> > NUDB::getEnrolledCourses(bool onlyThisSemester) {
+vector<map<string, string> > NUDB::getEnrolledCourses(bool onlyThisSemester, NUDB::GradeOption o) {
 	vector<map<string, string> > res;
 	string year, semester;
+	string condition;
+	switch(o) {
+		case NUDB::GradeOption::All:
+			condition = "";
+			break;
+		case NUDB::GradeOption::HasGrade:
+			condition = " AND A.grade IS NOT NULL ";
+			break;
+		case NUDB::GradeOption::NoGrade:
+			condition = " AND A.grade IS NULL ";
+			break;
+	}
 	if(onlyThisSemester)
 		getCurrentYearAndSemester(year, semester);
 	res = queryResult(mConnection,
 			"SELECT A.uoscode,B.uosname,A.year,A.semester,C.classtime,C.classroomid "
-			"FROM transcript A, unitofstudy B, lecture C "
+			"FROM transcript A INNER JOIN unitofstudy B ON A.uoscode=B.uoscode"
+			" LEFT OUTER JOIN lecture C ON "
+			" A.uoscode=C.uoscode AND A.year=C.year AND A.semester=C.semester "
 			"WHERE A.studid = " + mId +
 			" AND A.uoscode = B.uoscode " +
-			" AND A.uoscode=C.uoscode AND A.year=C.year AND A.semester=C.semester " +
 			(onlyThisSemester ? 
-			 " AND A.year = " + year + " AND A.semester = '"  + semester + "'"
-			 : "") + ";");
+			" AND A.year = " + year + " AND A.semester = '"  + semester + "'" : "") + 
+			condition + ";");
 	printResult(res);
 	return res;
 }
@@ -215,6 +229,7 @@ vector<map<string, string> > NUDB::queryResult(MYSQL* conn, const string& query)
 	MYSQL_RES* res_set;
 	MYSQL_ROW row;
 	MYSQL_FIELD* field;
+		cout << query << endl;
 	if(mysql_query(conn, query.c_str())) {
 		cout << query << endl;
 		return res;

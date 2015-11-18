@@ -161,28 +161,14 @@
 	            <table class="table table-striped">
 	              <thead>
 	                <tr>
-	                  <th>#</th>
-	                  <th>Header</th>
-	                  <th>Header</th>
-	                  <th>Header</th>
-	                  <th>Header</th>
+	                  <th>Code</th>
+	                  <th>Course</th>
+	                  <th>Semester</th>
+	                  <th>Year</th>
+	                  <th>Grade</th>
 	                </tr>
 	              </thead>
-	              <tbody>
-	                <tr>
-	                  <td>1,001</td>
-	                  <td>Lorem</td>
-	                  <td>ipsum</td>
-	                  <td>dolor</td>
-	                  <td>sit</td>
-	                </tr>
-	                <tr>
-	                  <td>1,002</td>
-	                  <td>amet</td>
-	                  <td>consectetur</td>
-	                  <td>adipiscing</td>
-	                  <td>elit</td>
-	                </tr>
+	              <tbody id="withdraw_list">
 	              </tbody>
 	            </table>
 	          </div>
@@ -289,8 +275,8 @@ function getCookie(cname) {
 								"<td>"+data[i].uosname+"</td>"+
 								"<td>"+data[i].semester+"</td>"+
 								"<td>"+data[i].year+"</td>"+
-								"<td>"+data[i].classtime+"</td>"+
-								"<td>"+data[i].classroomid+"</td>"+
+								"<td>"+transGrade(data[i].classtime)+"</td>"+
+								"<td>"+transGrade(data[i].classroomid)+"</td>"+
 								"</tr>"
 							);
 						}
@@ -309,7 +295,7 @@ function getCookie(cname) {
 				url: "get_transcript",
 				data: "session="+getCookie("session"),
 				success: function(data) {
-					alert(JSON.stringify(data));
+					//alert(JSON.stringify(data));
 					if(data.success != "true") {
 						$("#transcript_list").empty();
 						for(var i = 0; i < data.length; i++) {
@@ -327,6 +313,30 @@ function getCookie(cname) {
 				}
 			});
 		}	
+		function refreshWithdrawTab() {
+			$.ajax({
+				type: "POST",
+				url: "get_withdraw",
+				data: "session="+getCookie("session"),
+				success: function(data) {
+					alert(JSON.stringify(data));
+					if(data.success != "true") {
+						$("#withdraw_list").empty();
+						for(var i = 0; i < data.length; i++) {
+							$("#withdraw_list").append(
+								"<tr>"+
+								"<td>"+data[i].uoscode+"</td>"+
+								"<td>"+data[i].uosname+"</td>"+
+								"<td>"+data[i].semester+"</td>"+
+								"<td>"+data[i].year+"</td>"+
+								"<td>"+transGrade(data[i].grade)+"</td>"+
+								"</tr>"
+							);
+						}
+					}
+				}
+			});
+		}
 		var savedProfile = {
 			id: "",
 			name: "",
@@ -398,6 +408,7 @@ function getCookie(cname) {
 		}
 		function switchWithdrawTab() {
 			$("#panes").children("div").hide();
+			refreshWithdrawTab();
 			$("#withdraw_tab").show();
 			setActive("withdraw_side");
 		}
