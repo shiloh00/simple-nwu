@@ -438,6 +438,8 @@ function getCookie(cname) {
 					if(data.success == "true") {
 						//alert("Enroll successfully!");
 						refreshEnrollTab();
+					} else {
+						alert("Failed to enroll!");
 					}
 				}
 			});
@@ -495,6 +497,8 @@ function getCookie(cname) {
 					if(data.success == "true") {
 						//alert("Withdraw successfully!");
 						refreshWithdrawTab();
+					} else {
+						alert("Failed to withdraw!");
 					}
 				}
 			});
