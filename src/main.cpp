@@ -1,7 +1,7 @@
 #include <iostream>
 #include <mysql/mysql.h>
 #include <nudb.h>
-#include "./mongoose.h"
+#include <mongoose.h>
 #include <vector>
 #include <map>
 #include <sstream>

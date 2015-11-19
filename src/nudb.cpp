@@ -8,7 +8,7 @@
 #include <algorithm>
 #include <string>
 
-#define DEBUG_PRINT
+//#define DEBUG_PRINT
 
 using namespace std;
 
@@ -243,9 +243,8 @@ vector<map<string, string> > NUDB::queryResult(MYSQL* conn, const string& query)
 	MYSQL_RES* res_set;
 	MYSQL_ROW row;
 	MYSQL_FIELD* field;
-		cout << query << endl;
 	if(mysql_query(conn, query.c_str())) {
-		cout << query << endl;
+		cout << "failed: " <<  query << endl;
 		return res;
 	}
 	res_set = mysql_store_result(conn);

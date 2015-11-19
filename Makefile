@@ -24,7 +24,8 @@ lib_mysqludf_sys.so: ./3rdparty/lib_mysqludf_sys/lib_mysqludf_sys.c
 
 .PHONY: clean install
 clean:
-	rm -rf *.o nwu *.so $(INSTALL_DIR)/lib_mysqludf_sys.so
+	-rm -rf *.o nwu *.so 
+	-rm -rf $(INSTALL_DIR)/lib_mysqludf_sys.so
 
 install: lib_mysqludf_sys.so
 	cp lib_mysqludf_sys.so $(INSTALL_DIR)/
