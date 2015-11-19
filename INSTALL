@@ -1,0 +1,12 @@
+
+1. make
+
+2. sudo make install
+
+3. remove MySQL from AppArmor
+
+4. Install curl
+
+5. mysql -u -p < XXX.sql
+
+6. ./nwu
